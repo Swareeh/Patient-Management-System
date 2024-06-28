@@ -1,13 +1,13 @@
 import mysql.connector as ms
 
-con = ms.connect(user='root',host='localhost',passwd='yourpassword')
+con = ms.connect(user='root',host='localhost',passwd='robo')
 
 cur = con.cursor()
 
 cur.execute('create database if not exists clinic')
 cur.execute('use clinic')
 
-cur.execute('create table if not exists credentials(Username varchar(30),Password varchar(40),Profession varchar(20))')
+cur.execute('create table if not exists credentials(Name varchar(30),Username varchar(30),Password varchar(40),Profession varchar(20))')
 
 # Everything a receptionist needs to do-------------------------------------------------------
 def receptionist():
@@ -85,7 +85,7 @@ def receptionist():
                         break
 
                 else:
-                    print(data)
+                    print(data,'To cancel the process input: ->["Cancel"]')
                     cur.execute('select * from patients where name="{}" and phone_number="{}"'.format(PTname,PTnumber))
                     data = cur.fetchall()
                     PTage = data[0][1]
@@ -93,6 +93,7 @@ def receptionist():
                     PTinsurance = data[0][4]
 
                     consult_doctor = input('Which doctor would you like to consult: ')
+
                     token ='QRTW'
                     consultation_fees = int(input('Enter consulation fees: '))
 
@@ -103,6 +104,89 @@ def receptionist():
                     break
 
 #---------------------------------------------------------------------------------------
+
+# Things nurse do-----------------------------------------------
+
+def nurse():
+    while True:
+        repeat = input("\nSelect an Option:\n1.Next patient\n2.Logout\nOption: ")
+
+        if repeat == "1":
+            print("Processing the next patient...")
+            token = input('Enter the token: ')
+
+
+            cur.execute("SELECT Name, age FROM waiting WHERE Token = %s", (token,))    
+            result = cur.fetchone()
+            
+            if result:
+                print(f"Patient Name: {result[0]}, Age: {result[1]}")
+
+            height = int(input('Enter the height: '))
+            weight = int(input('Enter the weight: '))
+            body_temperature = int(input('Enter the body temperature: '))
+            blood_pressure = int(input('Enter the blood pressure: '))
+
+            
+            cur.execute("UPDATE waiting SET Height = %s, Weight = %s,body_temperature = %s, blood_Pressure = %s WHERE Token = %s", (height, weight,body_temperature, blood_pressure, token))
+            con.commit()
+                
+        elif repeat == "2":
+            print("Logging out...")
+            break  
+
+        else:
+            print("Invalid input, please try again.")
+
+#----------------------------------------------------------------------------------------------------
+
+# Things docotors do----------------------------------------------------------------------
+
+def doctor():
+    while True:
+        repeat =input('\nSelect an option:\n1.Next Patient\n2.Logout\nOption: ')
+
+        if repeat == '2':
+            cur.execute('update doctors set availability="False" where name="{}"'.format(drname))
+            con.commit()
+            break
+        else:
+           token = input('Enter patient token: ')
+           cur.execute('select * from waiting where token="{}"'.format(token))
+           data = cur.fetchall()
+           if data ==[]:
+               print('Invalid Token!')
+               continue
+           
+           else:
+            print('\nName:',data[0][1])
+            print('Phone number:',data[0][4])
+            print('EmailID:',data[0][5])
+            print('Age:',data[0][6])
+            print('Height:',data[0][9])
+            print('Weight:',data[0][10])
+            print('Body Temperature:',data[0][11])
+            print('Blood Pressure:',data[0][12])
+            print('\nPrevious Records:')
+
+            cur.execute('create table if not exists records(Name varchar(30),Consulting_Doctor varchar(30),Speciality varchar(20),Prescription varchar(200),Phone_number varchar(15),EmailID varchar(254),Age varchar(3),Insurance varchar(50),Consultation_Fees int,Height decimal(5,2),Weight decimal(3,1),Body_Temperature decimal(3,1),Blood_Pressure int)')
+            cur.execute('select * from records where name="{}" and phone_number="{}"'.format(data[0][1],data[0][4]))
+            data = cur.fetchall()
+            print(data)
+
+            prescription = input('\nEnter prescription: ')
+
+            cur.execute('select * from waiting where token="{}"'.format(token))
+            data = cur.fetchall()
+
+            cur.execute('insert into records values("{}","{}","{}","{}",{},"{}","{}","{}","{}","{}","{}","{}","{}")'.format(data[0][1],data[0][2],data[0][3],prescription,data[0][4],data[0][5],data[0][6],data[0][7],data[0][8],data[0][9],data[0][10],data[0][11],data[0][12]))
+            con.commit()
+            cur.execute('delete from waiting where token="{}"'.format(token))
+            con.commit()
+            print('Patient Record Saved!')
+
+#-------------------------------------------------------------------------------------------------------------------
+
 
 
 # Login System --------------------------------------------------------------------------
@@ -126,12 +210,16 @@ while True:
                 receptionist()
             
             elif profession.lower() == 'nurse':
-                # nurse()
-                print('Nurse things')
+                nurse()
             
             elif profession.lower() == 'doctor':
-                # doctor()
-                print('doctor things')
+                cur.execute('select * from credentials where username="{}" and password="{}" and profession="Doctor"'.format(username,password))
+                data = cur.fetchall()
+                drname = data[0][0]
+                cur.execute('update doctors set availability="True" where name="{}"'.format(drname))
+                con.commit()
+
+                doctor()
 
             else:
                 print('Error: Invalid profession found!')
@@ -143,9 +231,14 @@ while True:
         data = cur.fetchall()
         duplicate = False
 
+        name = input('\nEnter your name: ')
         username = input('\nEnter an username: ')
         password = input('Enter an password: ')
-        profession = input('Enter your profession(Receptionist/Nurse/Doctor): ')
+        profession = input('\nEnter your profession(Receptionist/Nurse/Doctor): ')
+
+        if len(name)>30:
+            print('Name is too long!')
+            continue
 
         if len(username)>30 or len(password)>40:
             print('Username or password excceded the character count 30 and 40 respectively!')
@@ -163,11 +256,10 @@ while True:
             print('Invalid Profession!')
             continue
 
-        cur.execute('insert into credentials values("{}","{}","{}")'.format(username,password,profession))
+        cur.execute('insert into credentials values("{}","{}","{}","{}")'.format(name,username,password,profession))
 
         cur.execute("create table if not exists doctors(Name varchar(30),Speciality varchar(30),Availability varchar(5))")
         if profession.lower() == 'doctor':
-            name = input('Enter your name: ')
             speciality = input('Enter your speciality: ')
             cur.execute('insert into doctors values("{}","{}","False")'.format(name,speciality))
             con.commit()
