@@ -1,6 +1,6 @@
 import mysql.connector as ms
 
-con = ms.connect(user='root',host='localhost',passwd='robo')
+con = ms.connect(user='root',host='localhost',passwd='yourpassword')
 
 cur = con.cursor()
 
