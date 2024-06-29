@@ -1,4 +1,5 @@
 import mysql.connector as ms
+import random
 
 con = ms.connect(user='root',host='localhost',passwd='robo')
 
@@ -11,10 +12,13 @@ cur.execute('create table if not exists credentials(Name varchar(30),Username va
 
 # Everything a receptionist needs to do-------------------------------------------------------
 def receptionist():
+    cur.execute('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED')
+
     cur.execute('create table if not exists patients(Name varchar(30),Age varchar(3),Phone_Number varchar(15),EmailID varchar(254),Insurance varchar(50))')
     while True:
         repeat = input('\nSelect an Option:\n1.Register Patient\n2.Logout\nOption: ')
         if repeat == '2':
+            print('\nLogging out...')
             break
         else:
             PTname = input('Enter patient name: ')
@@ -94,16 +98,40 @@ def receptionist():
 
                     consult_doctor = input('Which doctor would you like to consult: ')
 
-                    token ='QRTW'
-                    consultation_fees = int(input('Enter consulation fees: '))
+                    if consult_doctor.lower() == 'cancel':
+                        break
 
                     cur.execute('create table if not exists waiting(Token varchar(4),Name varchar(30),Consulting_Doctor varchar(30),Speciality varchar(20),Phone_number varchar(15),EmailID varchar(254),Age varchar(3),Insurance varchar(50),Consultation_Fees int,Height decimal(5,2),Weight decimal(3,1),Body_Temperature decimal(3,1),Blood_Pressure int)')
-                    cur.execute('insert into waiting values("{}","{}","{}","{}",{},"{}","{}","{}","{}",NULL,NULL,NULL,NULL)'.format(token,PTname,consult_doctor,consult_speciality,PTnumber,PTemail,PTage,PTinsurance,consultation_fees))
-                    con.commit()
-                    print('Your token number is:',token)
-                    break
 
-#---------------------------------------------------------------------------------------
+                    def generateToken():
+                        characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+                        generatedToken = ''
+
+                        for i in range(4):
+                            random_chr = random.choice(characters)
+                            generatedToken+= random_chr
+                        return generatedToken
+
+                    Token = generateToken()
+
+                    cur.execute('select token from waiting')
+                    data = cur.fetchall()
+
+
+                    while True:
+                        for i in data:
+                            for j in i:
+                                if j == Token:
+                                    Token = generateToken()
+                                    break
+                        break
+                    
+                    consultation_fees = int(input('Enter consulation fees: '))
+
+                    cur.execute('insert into waiting values("{}","{}","{}","{}",{},"{}","{}","{}","{}",NULL,NULL,NULL,NULL)'.format(Token,PTname,consult_doctor,consult_speciality,PTnumber,PTemail,PTage,PTinsurance,consultation_fees))
+                    con.commit()
+                    print('Your token is:',Token)
+                    break
 
 # Things nurse do-----------------------------------------------
 
@@ -111,8 +139,11 @@ def nurse():
     while True:
         repeat = input("\nSelect an Option:\n1.Next patient\n2.Logout\nOption: ")
 
-        if repeat == "1":
-            print("Processing the next patient...")
+        if repeat == "2":
+            print("\nLogging out...")
+            break  
+
+        else:
             token = input('Enter the token: ')
 
 
@@ -126,19 +157,9 @@ def nurse():
             weight = int(input('Enter the weight: '))
             body_temperature = int(input('Enter the body temperature: '))
             blood_pressure = int(input('Enter the blood pressure: '))
-
             
             cur.execute("UPDATE waiting SET Height = %s, Weight = %s,body_temperature = %s, blood_Pressure = %s WHERE Token = %s", (height, weight,body_temperature, blood_pressure, token))
             con.commit()
-                
-        elif repeat == "2":
-            print("Logging out...")
-            break  
-
-        else:
-            print("Invalid input, please try again.")
-
-#----------------------------------------------------------------------------------------------------
 
 # Things docotors do----------------------------------------------------------------------
 
@@ -147,6 +168,7 @@ def doctor():
         repeat =input('\nSelect an option:\n1.Next Patient\n2.Logout\nOption: ')
 
         if repeat == '2':
+            print('Logging out...')
             cur.execute('update doctors set availability="False" where name="{}"'.format(drname))
             con.commit()
             break
@@ -185,11 +207,8 @@ def doctor():
             con.commit()
             print('Patient Record Saved!')
 
-#-------------------------------------------------------------------------------------------------------------------
-
-
-
 # Login System --------------------------------------------------------------------------
+print('\nAll Systems Online!')
 while True:
     login = input('\nSelect an Option:\n1.Login\n2.Sign Up\n3.Exit\nOption: ')
 
@@ -197,7 +216,7 @@ while True:
         username = input('\nEnter an username: ')
         password = input('Enter an password: ')
 
-        cur.execute('SELECT profession from credentials where username="{}" and password ="{}"'.format(username,password))
+        cur.execute('SELECT profession,name from credentials where username="{}" and password ="{}"'.format(username,password))
         data = cur.fetchall()
 
         if data == []:
@@ -205,14 +224,18 @@ while True:
 
         else:
             profession = data[0][0]
+            name = data[0][1]
 
             if profession.lower() == 'receptionist':
+                print('\nWelcome back {}!'.format(name))
                 receptionist()
             
             elif profession.lower() == 'nurse':
+                print('\nWelcome back {}!'.format(name))
                 nurse()
             
             elif profession.lower() == 'doctor':
+                print('\nWelcome back {}!'.format(name))
                 cur.execute('select * from credentials where username="{}" and password="{}" and profession="Doctor"'.format(username,password))
                 data = cur.fetchall()
                 drname = data[0][0]
@@ -224,8 +247,6 @@ while True:
             else:
                 print('Error: Invalid profession found!')
                 
-
-
     if login == '2':
         cur.execute('SELECT username from credentials')
         data = cur.fetchall()
@@ -269,5 +290,3 @@ while True:
     if login == '3':
         print('Shutting systems down!')
         break
-
-#------------------------------------------------------------
