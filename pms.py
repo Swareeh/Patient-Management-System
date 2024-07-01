@@ -16,10 +16,29 @@ def receptionist():
 
     cur.execute('create table if not exists patients(Name varchar(30),Age varchar(3),Phone_Number varchar(15),EmailID varchar(254),Insurance varchar(50))')
     while True:
-        repeat = input('\nSelect an Option:\n1.Register Patient\n2.Logout\nOption: ')
-        if repeat == '2':
+        repeat = input('\nSelect an Option:\n1.Register Patient\n2.View all doctors\n3.Logout\nOption: ')
+        if repeat == '3':
             print('\nLogging out...')
             break
+
+        elif repeat == '2':
+            cur.execute('select doctors.*,(select count(*) from waiting where doctors.name=waiting.consulting_doctor) as Waiting_Patients from doctors')
+            data = cur.fetchall()
+            print(data)
+
+            while True:
+                search = input('Would you like to search for a speciality? (y/n): ')
+                if search == 'n':
+                    break
+                consult_speciality = input('Which speciality would you like to consult: ')
+                cur.execute('select doctors.*,(select count(*) from waiting where doctors.name=waiting.consulting_doctor) as Waiting_Patients from doctors where doctors.speciality="{}"'.format(consult_speciality))
+
+                data = cur.fetchall()
+                print(data)
+
+                if data == []:
+                    print('Sorry! No doctors of this speciality are available here.')
+
         else:
             PTname = input('Enter patient name: ')
 
