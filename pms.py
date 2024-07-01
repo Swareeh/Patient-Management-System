@@ -98,7 +98,8 @@ def receptionist():
 
             while True:
                 consult_speciality = input('Which speciality would you like to consult: ')
-                cur.execute('select * from doctors where speciality="{}" and Availability="True"'.format(consult_speciality))
+                cur.execute('select doctors.*,(select count(*) from waiting where doctors.name=waiting.consulting_doctor) as Waiting_Patients from doctors where doctors.speciality="{}"'.format(consult_speciality))
+
                 data = cur.fetchall()
 
                 if data == []:
