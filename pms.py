@@ -22,9 +22,13 @@ def receptionist():
             break
 
         elif repeat == '2':
+            cur.execute('create table if not exists waiting(Token varchar(4),Name varchar(30),Consulting_Doctor varchar(30),Speciality varchar(20),Phone_number varchar(15),EmailID varchar(254),Age varchar(3),Insurance varchar(50),Consultation_Fees int,Height decimal(5,2),Weight decimal(3,1),Body_Temperature decimal(3,1),Blood_Pressure int)')
             cur.execute('select doctors.*,(select count(*) from waiting where doctors.name=waiting.consulting_doctor) as Waiting_Patients from doctors')
             data = cur.fetchall()
             print(data)
+            if data == []:
+                print('No doctors have been recruited!')
+                break
 
             while True:
                 search = input('Would you like to search for a speciality? (y/n): ')
