@@ -1,7 +1,8 @@
 import mysql.connector as ms
 import random
+from tabulate import tabulate
 
-con = ms.connect(user='root',host='localhost',passwd='yourpassword')
+con = ms.connect(user='root',host='localhost',passwd='your password')
 
 cur = con.cursor()
 
@@ -25,7 +26,8 @@ def receptionist():
             cur.execute('create table if not exists waiting(Token varchar(4),Name varchar(30),Consulting_Doctor varchar(30),Speciality varchar(20),Phone_number varchar(15),EmailID varchar(254),Age varchar(3),Insurance varchar(50),Consultation_Fees int,Height decimal(5,2),Weight decimal(3,1),Body_Temperature decimal(3,1),Blood_Pressure int)')
             cur.execute('select doctors.*,(select count(*) from waiting where doctors.name=waiting.consulting_doctor) as Waiting_Patients from doctors')
             data = cur.fetchall()
-            print(data)
+            columns = ['Name','Speciality','Availability','Patients Waiting']
+            print(tabulate(data,headers=columns, tablefmt='grid'))
             if data == []:
                 print('No doctors have been recruited!')
                 break
@@ -38,13 +40,14 @@ def receptionist():
                 cur.execute('select doctors.*,(select count(*) from waiting where doctors.name=waiting.consulting_doctor) as Waiting_Patients from doctors where doctors.speciality="{}"'.format(consult_speciality))
 
                 data = cur.fetchall()
-                print(data)
+                columns = ['Name','Speciality','Availability','Patients Waiting']
+                print(tabulate(data,headers=columns, tablefmt='grid'))
 
                 if data == []:
                     print('Sorry! No doctors of this speciality are available here.')
 
         else:
-            PTname = input('Enter patient name: ')
+            PTname = input('\nEnter patient name: ')
 
             if len(PTname)>30:
                 print('Name excceded character limit: 30')
@@ -81,10 +84,12 @@ def receptionist():
                     con.commit()
                     cur.execute('select * from patients where name="{}" and phone_number="{}"'.format(PTname,PTnumber))
                     data = cur.fetchall()
-                    print(data)
+                    columns = ['Name','Age','Phone Number','Email ID','Insurance']
+                    print(tabulate(data,headers=columns, tablefmt='grid'))
 
             else:
-                print(data)
+                columns = ['Name','Age','Phone Number','Email ID','Insurance']
+                print(tabulate(data,headers=columns, tablefmt='grid'))
                 
             while True:
                 wnt2update = input('Would you like to update the above data (y/n): ')
@@ -96,13 +101,14 @@ def receptionist():
                     con.commit()
                     cur.execute('select * from patients where name="{}" and phone_number="{}"'.format(PTname,PTnumber))
                     data = cur.fetchall()
-                    print(data)
+                    columns = ['Name','Age','Phone Number','Email ID','Insurance']
+                    print(tabulate(data,headers=columns, tablefmt='grid'))
                 else:
                     break
 
             while True:
-                consult_speciality = input('Which speciality would you like to consult: ')
-                cur.execute('select doctors.*,(select count(*) from waiting where doctors.name=waiting.consulting_doctor) as Waiting_Patients from doctors where doctors.speciality="{}"'.format(consult_speciality))
+                consult_speciality = input('\nWhich speciality would you like to consult: ')
+                cur.execute('select doctors.*,(select count(*) from waiting where doctors.name=waiting.consulting_doctor) as Waiting_Patients from doctors where doctors.speciality="{}" and availability="True"'.format(consult_speciality))
 
                 data = cur.fetchall()
 
@@ -113,7 +119,9 @@ def receptionist():
                         break
 
                 else:
-                    print(data,'To cancel the process input: ->["Cancel"]')
+                    columns = ['Name','Speciality','Availability','Patients Waiting']
+                    print(tabulate(data,headers=columns, tablefmt='grid'))
+                    print('\nTo cancel the process input: ->["Cancel"]')
                     cur.execute('select * from patients where name="{}" and phone_number="{}"'.format(PTname,PTnumber))
                     data = cur.fetchall()
                     PTage = data[0][1]
@@ -154,50 +162,62 @@ def receptionist():
 
                     cur.execute('insert into waiting values("{}","{}","{}","{}",{},"{}","{}","{}","{}",NULL,NULL,NULL,NULL)'.format(Token,PTname,consult_doctor,consult_speciality,PTnumber,PTemail,PTage,PTinsurance,consultation_fees))
                     con.commit()
-                    print('Your token is:',Token)
+                    print('\nYour token is:',Token)
                     break
 
 # Things nurse do-----------------------------------------------
 
 def nurse():
-    while True:
-        repeat = input("\nSelect an Option:\n1.Next patient\n2.Logout\nOption: ")
+    cur.execute('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED')
 
-        if repeat == "2":
+    while True:
+        repeat = input("\nSelect an Option:\n1.View waiting patients\n2.Next patient\n3.Logout\nOption: ")
+
+        if repeat == "3":
             print("\nLogging out...")
             break  
 
-        else:
+        elif repeat == '2':
             token = input('Enter the token: ')
-
 
             cur.execute("SELECT Name, age FROM waiting WHERE Token = %s", (token,))    
             result = cur.fetchone()
             
             if result:
-                print(f"Patient Name: {result[0]}, Age: {result[1]}")
+                print(f"\nPatient Name: {result[0]}, Age: {result[1]}")
 
-            height = int(input('Enter the height: '))
+            height = int(input('\nEnter the height: '))
             weight = int(input('Enter the weight: '))
             body_temperature = int(input('Enter the body temperature: '))
             blood_pressure = int(input('Enter the blood pressure: '))
             
             cur.execute("UPDATE waiting SET Height = %s, Weight = %s,body_temperature = %s, blood_Pressure = %s WHERE Token = %s", (height, weight,body_temperature, blood_pressure, token))
             con.commit()
+            print('\nMedical records have been updated!')
+
+        else:
+            cur.execute('select token,name,consulting_doctor,speciality,phone_number,age from waiting where height is NULL')
+            data = cur.fetchall()
+            columns = ['Token','Patient Name','Consulting Doctor','Speciality','Phone Number','Age']
+            print(tabulate(data,headers=columns, tablefmt='grid'))
+
 
 # Things docotors do----------------------------------------------------------------------
 
-def doctor():
-    while True:
-        repeat =input('\nSelect an option:\n1.Next Patient\n2.Logout\nOption: ')
+def doctor(drname):
+    cur.execute('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED')
 
-        if repeat == '2':
+    while True:
+        repeat =input('\nSelect an option:\n1.View all waiting patients\n2.Next Patient\n3.Logout\nOption: ')
+
+        if repeat == '3':
             print('Logging out...')
             cur.execute('update doctors set availability="False" where name="{}"'.format(drname))
             con.commit()
             break
-        else:
-           token = input('Enter patient token: ')
+
+        elif repeat == '2':
+           token = input('\nEnter patient token: ')
            cur.execute('select * from waiting where token="{}"'.format(token))
            data = cur.fetchall()
            if data ==[]:
@@ -216,9 +236,10 @@ def doctor():
             print('\nPrevious Records:')
 
             cur.execute('create table if not exists records(Name varchar(30),Consulting_Doctor varchar(30),Speciality varchar(20),Prescription varchar(200),Phone_number varchar(15),EmailID varchar(254),Age varchar(3),Insurance varchar(50),Consultation_Fees int,Height decimal(5,2),Weight decimal(3,1),Body_Temperature decimal(3,1),Blood_Pressure int)')
-            cur.execute('select * from records where name="{}" and phone_number="{}"'.format(data[0][1],data[0][4]))
+            cur.execute('select name,consulting_doctor,speciality,prescription,age,height,weight,body_temperature,blood_pressure from records where name="{}" and phone_number="{}"'.format(data[0][1],data[0][4]))
             data = cur.fetchall()
-            print(data)
+            columns = ['Patient Name','Consulted Doctor','Speciality','Prescription','Age','Height','Weight','Body Temperature','Blood Pressure']
+            print(tabulate(data,headers=columns, tablefmt='grid'))
 
             prescription = input('\nEnter prescription: ')
 
@@ -230,6 +251,13 @@ def doctor():
             cur.execute('delete from waiting where token="{}"'.format(token))
             con.commit()
             print('Patient Record Saved!')
+
+        else:
+            cur.execute('select token,name,consulting_doctor,speciality,phone_number,age from waiting where consulting_doctor="{}" and height is not NULL'.format(drname))
+            data = cur.fetchall()
+            columns = ['Token','Patient Name','Consulting Doctor','Speciality','Phone Number','Age']
+            print(tabulate(data,headers=columns, tablefmt='grid'))
+
 
 # Login System --------------------------------------------------------------------------
 print('\nAll Systems Online!')
@@ -266,7 +294,7 @@ while True:
                 cur.execute('update doctors set availability="True" where name="{}"'.format(drname))
                 con.commit()
 
-                doctor()
+                doctor(drname)
 
             else:
                 print('Error: Invalid profession found!')
