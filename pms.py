@@ -169,6 +169,8 @@ def receptionist():
 
 def nurse():
     cur.execute('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED')
+    cur.execute('create table if not exists waiting(Token varchar(4),Name varchar(30),Consulting_Doctor varchar(30),Speciality varchar(20),Phone_number varchar(15),EmailID varchar(254),Age varchar(3),Insurance varchar(50),Consultation_Fees int,Height decimal(5,2),Weight decimal(3,1),Body_Temperature decimal(3,1),Blood_Pressure int)')
+
 
     while True:
         repeat = input("\nSelect an Option:\n1.View waiting patients\n2.Next patient\n3.Logout\nOption: ")
@@ -206,6 +208,8 @@ def nurse():
 
 def doctor(drname):
     cur.execute('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED')
+    cur.execute('create table if not exists waiting(Token varchar(4),Name varchar(30),Consulting_Doctor varchar(30),Speciality varchar(20),Phone_number varchar(15),EmailID varchar(254),Age varchar(3),Insurance varchar(50),Consultation_Fees int,Height decimal(5,2),Weight decimal(3,1),Body_Temperature decimal(3,1),Blood_Pressure int)')
+
 
     while True:
         repeat =input('\nSelect an option:\n1.View all waiting patients\n2.Next Patient\n3.Logout\nOption: ')
