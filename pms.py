@@ -2,7 +2,7 @@ import mysql.connector as ms
 import random
 from tabulate import tabulate
 
-con = ms.connect(user='root',host='localhost',passwd='your password')
+con = ms.connect(user='root',host='localhost',passwd='yourpassword')
 
 cur = con.cursor()
 
