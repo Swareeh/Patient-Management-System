@@ -30,7 +30,6 @@ def receptionist():
             print(tabulate(data,headers=columns, tablefmt='grid'))
             if data == []:
                 print('No doctors have been recruited!')
-                break
 
             while True:
                 search = input('Would you like to search for a speciality? (y/n): ')
