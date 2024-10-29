@@ -268,6 +268,18 @@ def doctor(drname):
 # Login System --------------------------------------------------------------------------
 print('\nAll Systems Online!')
 while True:
+    print('----------------------------')
+    print(r'''
+    _____   __  __   _____ 
+    |  __ \ |  \/  | / ____|
+    | |__) || \  / || (___  
+    |  ___/ | |\/| | \___ \ 
+    | |     | |  | | ____) |
+    |_|     |_|  |_||_____/                                          
+    ''')
+    print('----------------------------')
+    print('Patient Management System')
+    print('----------------------------')
     login = input('\nSelect an Option:\n1.Login\n2.Sign Up\n3.Exit\nOption: ')
 
     if login == '1':
